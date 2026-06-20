@@ -1,10 +1,7 @@
 # Signing & notarizing CDJ USB for distribution
 
 `scripts/make_dmg.sh` produces a signed, notarized, warning-free `.dmg` once the
-prerequisites below are met. Account: `alex@jiye.ca` (team `6UZ49M64YB`).
-
-This reuses the same Developer ID and notarytool profile as the `reel` project —
-notarization credentials are account-level, so one profile works for any app.
+prerequisites below are met.
 
 ## Prerequisites
 
@@ -15,15 +12,23 @@ notarization credentials are account-level, so one profile works for any app.
    security find-identity -v -p codesigning | grep "Developer ID Application"
    ```
 
-   You should see: `"Developer ID Application: Alexander Yoshino (6UZ49M64YB)"`
+   You should see a line like:
+   `"Developer ID Application: <Your Name> (<TEAMID>)"`
 
-2. A **notarytool keychain profile** (named `reel-notary` here, already stored
-   for the reel project). To recreate it:
+2. A **notarytool keychain profile**. Create one once with an app-specific
+   password (https://account.apple.com → Sign-In & Security → App-Specific
+   Passwords):
 
    ```
-   xcrun notarytool store-credentials reel-notary \
-     --apple-id alex@jiye.ca --team-id 6UZ49M64YB \
+   xcrun notarytool store-credentials <profile-name> \
+     --apple-id <your-apple-id> --team-id <TEAMID> \
      --password <app-specific-password>
+   ```
+
+   Then point the build at it in `scripts/signing.env` (gitignored):
+
+   ```
+   CDJUSB_NOTARY_PROFILE="<profile-name>"
    ```
 
 ## Build the DMG
@@ -32,11 +37,11 @@ notarization credentials are account-level, so one profile works for any app.
 ./scripts/make_dmg.sh
 ```
 
-Signing identity is auto-detected from the keychain; the notary profile comes
-from `scripts/signing.env` (gitignored). Output: `dist/CDJ-USB-<version>.dmg`.
+The signing identity is auto-detected from your keychain; the notary profile is
+read from `scripts/signing.env` (gitignored). Output: `dist/CDJ-USB-<version>.dmg`.
 
 - Set nothing → unsigned DMG (right-click → Open to run).
-- Identity only (comment out `CDJUSB_NOTARY_PROFILE`) → signed, not notarized.
+- Identity only (no `CDJUSB_NOTARY_PROFILE`) → signed, not notarized.
 - Identity + profile → signed + notarized + stapled (warning-free).
 
 ## Notes
