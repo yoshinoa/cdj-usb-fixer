@@ -77,14 +77,73 @@ fi
 mkdir -p "$DIST_DIR"
 rm -f "$DMG_PATH"
 
+echo "==> Rendering DMG background..."
+BG_TMP="$(mktemp -d)"
+trap 'rm -rf "$STAGE" "$BG_TMP"' EXIT
+swift scripts/dmg_background.swift "$BG_TMP"
+mkdir "$STAGE/.background"
+tiffutil -cathidpicheck "$BG_TMP/bg1x.png" "$BG_TMP/bg2x.png" \
+  -out "$STAGE/.background/background.tiff" >/dev/null 2>&1
+
 echo "==> Creating $DMG_PATH ..."
+RW_DMG="$BG_TMP/rw.dmg"
 hdiutil create \
   -volname "$VOL_NAME" \
   -srcfolder "$STAGE" \
   -fs HFS+ \
-  -format UDZO \
+  -format UDRW \
+  -size 300m \
   -ov \
-  "$DMG_PATH" >/dev/null
+  "$RW_DMG" >/dev/null
+
+MOUNT_DIR="/Volumes/$VOL_NAME"
+hdiutil detach "$MOUNT_DIR" >/dev/null 2>&1 || true
+hdiutil attach "$RW_DMG" >/dev/null
+
+echo "==> Laying out Finder window (icon positions, background)..."
+# Hidden items (.background, .fseventsd, ...) must be positioned out of view
+# first: Finder's no-overlap logic otherwise shoves the visible icons off
+# their assigned spots.
+osascript <<EOF
+tell application "Finder"
+  tell disk "$VOL_NAME"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set the bounds of container window to {200, 120, 860, 548}
+    set opts to the icon view options of container window
+    set arrangement of opts to not arranged
+    set icon size of opts to 128
+    set text size of opts to 13
+    set background picture of opts to file ".background:background.tiff"
+    repeat with hiddenName in {".background", ".fseventsd", ".DS_Store", ".VolumeIcon.icns", ".Trashes"}
+      try
+        set position of item hiddenName of container window to {1000, 700}
+      end try
+    end repeat
+    set position of item "${APP_NAME}.app" of container window to {165, 185}
+    set position of item "Applications" of container window to {495, 185}
+    close
+    open
+    set position of item "${APP_NAME}.app" of container window to {165, 185}
+    set position of item "Applications" of container window to {495, 185}
+    update without registering applications
+    delay 1
+    close
+  end tell
+end tell
+EOF
+
+if [ -f "$STAGED_APP/Contents/Resources/AppIcon.icns" ] && command -v SetFile >/dev/null; then
+  cp "$STAGED_APP/Contents/Resources/AppIcon.icns" "$MOUNT_DIR/.VolumeIcon.icns"
+  SetFile -a C "$MOUNT_DIR"
+fi
+
+sync
+hdiutil detach "$MOUNT_DIR" >/dev/null
+hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 \
+  -o "$DMG_PATH" >/dev/null
 
 if [ -n "$SIGN_ID" ]; then
   codesign --force --timestamp --sign "$SIGN_ID" "$DMG_PATH"
