@@ -24,9 +24,17 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>$(PRODUCT_COPYRIGHT)</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>CDJ USB scans tracks from your rekordbox library, which may include files on your Desktop.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>CDJ USB scans tracks from your rekordbox library, which may include files in your Documents folder.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>CDJ USB scans tracks from your rekordbox library, which may include files in your Downloads folder.</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>CDJ USB reads your USB stick to check tracks for CDJ compatibility and fix WAV headers.</string>
 </dict>
 </plist>

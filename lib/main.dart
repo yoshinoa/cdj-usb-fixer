@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import 'models/usb_drive.dart';
@@ -8,6 +10,16 @@ import 'theme.dart';
 
 void main() {
   runApp(const CdjUsbApp());
+}
+
+String friendlyFsError(Object e) {
+  if (e is FileSystemException && e.osError?.errorCode == 1) {
+    return 'macOS blocked access to ${e.path ?? 'the files'}.\n\n'
+        'Open System Settings → Privacy & Security → Files & Folders → '
+        'CDJ USB and allow Removable Volumes (and Documents/Downloads for '
+        'library scans), then rescan.';
+  }
+  return e.toString();
 }
 
 class CdjUsbApp extends StatelessWidget {
@@ -613,7 +625,7 @@ class _TrackScanPageState extends State<TrackScanPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyFsError(e);
         _scanning = false;
       });
     }
@@ -629,7 +641,7 @@ class _TrackScanPageState extends State<TrackScanPage> {
         setState(() => _fixed.add(issue.file.path));
       } catch (e) {
         if (!mounted) return;
-        setState(() => _failed[issue.file.path] = e.toString());
+        setState(() => _failed[issue.file.path] = friendlyFsError(e));
       }
     }
     if (mounted) setState(() => _fixing = false);
